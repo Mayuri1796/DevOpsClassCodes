@@ -1,40 +1,42 @@
 pipeline {
     agent any
+
     stages {
-        stage('checkout') {
+        stage('checkout code with repository') {
             steps {
-                git url:'https://github.com/akshu20791/DevOpsClassCodes/', branch: "master"
+                git url: 'https://github.com/mohitkhokhar172/DevOpsClassCodes'
+                echo 'checkout done'
             }
         }
-        stage('Build') {
+        stage('compile the code') {
             steps {
-               sh "mvn clean package"
+                sh 'mvn compile'
+                echo 'compile done'
             }
         }
-       
-        stage('Build Image') {
+        stage('test the code') {
             steps {
-                sh 'docker build -t akshatimg .'
-                sh 'docker tag akshatimg:latest akshu20791/akshatimgaddbook:latest'
+                sh 'mvn test'
+                echo 'testing done'
             }
         }
-        stage('Docker login') {
+        stage('qa of code') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockercred', passwordVariable: 'PASS', usernameVariable: 'USER')]) {
-                    sh "echo $PASS | docker login -u $USER --password-stdin"
-                    sh 'docker push akshu20791/akshatimgaddbook:latest'
-                }
+                sh 'mvn pmd:pmd'
+                echo 'generate report'
+                recordIssues sourceCodeRetention: 'LAST_BUILD', tools: [mavenConsole()]
             }
         }
-        stage('Deploy') {
+        stage('packaging') {
             steps {
-                script {
-                    def dockerCmd = 'docker run -itd --name My-first-containe211 -p 80:8082 akshu20791/akshatimgaddbook:latest'
-                    sshagent(['sshkeypair']) {
-                        sh "ssh -o StrictHostKeyChecking=no ubuntu@172.31.20.232 ${dockerCmd}"
-                    }
-                }
+                sh 'mvn package' 
+                echo 'convert code'
             }
+        }
+    }
+    post { 
+        always { 
+            echo 'I will always say Hello again!'
         }
     }
 }
